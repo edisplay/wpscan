@@ -62,8 +62,9 @@ describe WPScan::Model::WpVersion do
         it 'returns the expected result' do
           @expected = [WPScan::Vulnerability.new(
             'WP 3.8 - Vuln 1',
-            references: { url: %w[url-4], wpvulndb: '3' },
-            type: 'AUTHBYPASS'
+            references: { url: %w[url-4], wpvulndb: '3099c1da-3750-4e63-8af9-929e773bbe57' },
+            type: 'AUTHBYPASS',
+            uuid: '3099c1da-3750-4e63-8af9-929e773bbe57'
           )]
         end
       end
@@ -76,15 +77,18 @@ describe WPScan::Model::WpVersion do
           @expected = [
             WPScan::Vulnerability.new(
               'WP 3.8.1 - Vuln 1',
-              references: { wpvulndb: '1' },
+              references: { wpvulndb: 'c099c1da-3750-4e63-8af9-929e773bbe57' },
               type: 'SQLI',
               cvss: { score: '5.4', vector: 'VECTOR' },
-              poc: "# Sample exploit code\nprint('exploit')"
+              poc: "# Sample exploit code\nprint('exploit')",
+              uuid: 'c099c1da-3750-4e63-8af9-929e773bbe57'
             ),
             WPScan::Vulnerability.new(
               'WP 3.8.1 - Vuln 2',
-              references: { url: %w[url-2 url-3], cve: %w[2014-0166], wpvulndb: '2' },
-              fixed_in: '3.8.2'
+              references: { url: %w[url-2 url-3], cve: %w[2014-0166],
+                            wpvulndb: 'd099c1da-3750-4e63-8af9-929e773bbe58' },
+              fixed_in: '3.8.2',
+              uuid: 'd099c1da-3750-4e63-8af9-929e773bbe58'
             )
           ]
         end
