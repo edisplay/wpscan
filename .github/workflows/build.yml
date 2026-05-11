@@ -57,72 +57,13 @@ jobs:
       run: |
         mkdir wordpress-test
         cd wordpress-test
+        bash "${GITHUB_WORKSPACE}/spec/integration/setup_wp_test_env.sh"
 
-        # Configure and start DDEV
-        ddev config --project-type=wordpress --php-version=8.1 --docroot=wordpress
-        ddev start
-
-        # Install WordPress
-        ddev exec wp core download --path=wordpress
-        ddev exec wp core install \
-          --path=wordpress \
-          --url=https://wordpress-test.ddev.site \
-          --title="WPScan Integration Test" \
-          --admin_user=admin \
-          --admin_password=password \
-          --admin_email=test@example.com \
-          --skip-email
-
-        # Install vulnerable plugins and theme for testing
-        ddev exec wp plugin install contact-form-7 --version=5.3.2 --activate --path=wordpress 2>/dev/null
-        ddev exec wp plugin install woocommerce --version=4.6.1 --activate --path=wordpress 2>/dev/null
-        ddev exec wp plugin install wordpress-seo --version=15.5 --activate --path=wordpress 2>/dev/null
-        ddev exec wp theme install twentynineteen --version=1.8 --activate --path=wordpress 2>/dev/null
-
-        # Verify site returns HTTP 200 (will exit non-zero on 4xx/5xx errors)
-        curl -k -f -s -o /dev/null -w "✓ WordPress responding: HTTP %{http_code}\n" https://wordpress-test.ddev.site
-
-    - name: Update WPScan database
-      if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.fork == false
-      run: bundle exec ruby -Ilib bin/wpscan --update
-
-    - name: Run WPScan against test site
+    - name: Run WPScan against test site and verify results
       if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.fork == false
       env:
         WPSCAN_API_TOKEN: ${{ secrets.WPSCAN_API_TOKEN }}
-      run: |
-        # Verify API token is configured
-        if [ -z "${WPSCAN_API_TOKEN}" ]; then
-          echo "Error: WPSCAN_API_TOKEN secret is not configured"
-          exit 1
-        fi
-
-        # Run WPScan with explicit enumeration (exit code 5 = vulnerabilities found, which we expect)
-        # Note: Using passive detection to avoid false positives in test environment
-        set +e
-        bundle exec ruby -Ilib bin/wpscan \
-          --url https://wordpress-test.ddev.site \
-          --disable-tls-checks \
-          --format json \
-          --output scan-results.json \
-          --api-token "${WPSCAN_API_TOKEN}" \
-          -e vp,vt \
-          --plugins-detection passive \
-          --themes-detection passive
-        EXIT_CODE=$?
-        set -e
-
-        # Verify we found vulnerabilities (exit code 5)
-        if [ "${EXIT_CODE}" -ne 5 ]; then
-          echo "✗ Expected exit code 5 (vulnerabilities found), got ${EXIT_CODE}"
-          exit 1
-        fi
-
-        echo "✓ WPScan found vulnerabilities (exit code 5)"
-
-    - name: Verify scan results
-      if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.fork == false
-      run: bundle exec ruby spec/integration/verify_results.rb scan-results.json
+      run: bash spec/integration/run_scan.sh
 
     - name: Upload scan results
       if: (github.event_name != 'pull_request' || github.event.pull_request.head.repo.fork == false) && always()
