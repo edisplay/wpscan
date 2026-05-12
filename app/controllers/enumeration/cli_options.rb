@@ -7,7 +7,7 @@ module WPScan
       def cli_options
         cli_enum_choices + cli_plugins_opts + cli_themes_opts +
           cli_timthumbs_opts + cli_config_backups_opts + cli_db_exports_opts +
-          cli_medias_opts + cli_users_opts
+          cli_backup_folders_opts + cli_medias_opts + cli_users_opts
       end
 
       # @return [ Array<OptParseValidator::OptBase> ]
@@ -26,13 +26,14 @@ module WPScan
               tt: OptBoolean.new(['--timthumbs']),
               cb: OptBoolean.new(['--config-backups']),
               dbe: OptBoolean.new(['--db-exports']),
+              bf: OptBoolean.new(['--backup-folders']),
               u: OptIntegerRange.new(['--users', 'User IDs range. e.g: u1-5'], value_if_empty: '1-10'),
               m: OptIntegerRange.new(['--medias',
                                       'Media IDs range. e.g m1-15',
                                       'Note: Permalink setting must be set to "Plain" for those to be detected'],
                                      value_if_empty: '1-100')
             },
-            value_if_empty: 'vp,vt,tt,cb,dbe,u,m',
+            value_if_empty: 'vp,vt,tt,cb,dbe,bf,u,m',
             incompatible: [%i[vp ap p], %i[vt at t]]
           ),
           OptRegexp.new(
@@ -143,6 +144,16 @@ module WPScan
             ['--db-exports-detection MODE',
              'Use the supplied mode to enumerate DB Exports, instead of the global (--detection-mode) mode.'],
             choices: %w[mixed passive aggressive], normalize: :to_sym, advanced: true
+          )
+        ]
+      end
+
+      # @return [ Array<OptParseValidator::OptBase> ]
+      def cli_backup_folders_opts
+        [
+          OptFilePath.new(
+            ['--backup-folders-list FILE-PATH', 'List of backup folders to use'],
+            exists: true, default: DB_DIR.join('backup_folders.txt').to_s, advanced: true
           )
         ]
       end

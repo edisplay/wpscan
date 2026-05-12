@@ -75,6 +75,7 @@ describe WPScan::Controller::Enumeration do
            timthumbs_list timthumbs_detection
            config_backups_list config_backups_detection
            db_exports_list db_exports_detection
+           backup_folders_list
            medias_detection
            users_list users_detection exclude_usernames]
       )
@@ -176,7 +177,7 @@ describe WPScan::Controller::Enumeration do
         let(:cli_args) { "#{super()} -e" }
 
         it 'calls the correct enum methods' do
-          %i[plugins themes timthumbs config_backups db_exports users medias].each do |option|
+          %i[plugins themes timthumbs config_backups db_exports backup_folders users medias].each do |option|
             expect(controller).to receive(:"enum_#{option}")
           end
         end
