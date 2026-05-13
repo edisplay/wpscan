@@ -4,6 +4,20 @@ module WPScan
   module Formatter
     # CLI Formatter
     class Cli < Base
+      def streams?
+        true
+      end
+
+      # ANSI sequence to clear the current line and return to column 0.
+      # Emitted at the start of each streamed enumeration finding so the
+      # ruby-progressbar line (which redraws via \r and leaves its previous
+      # render visible when interleaved with foreign output) gets wiped
+      # before the finding prints. No-op on non-TTY stdout so file/pipe
+      # output stays clean.
+      def bar_clear
+        $stdout.tty? ? "\e[2K\r" : ''
+      end
+
       # @return [ String ]
       def info_icon
         green('[+]')
