@@ -109,11 +109,6 @@ module WPScan
           OptFilePath.new(
             ['--timthumbs-list FILE-PATH', 'List of timthumbs\' location to use'],
             exists: true, default: DB_DIR.join('timthumbs-v3.txt').to_s, advanced: true
-          ),
-          OptChoice.new(
-            ['--timthumbs-detection MODE',
-             'Use the supplied mode to enumerate Timthumbs, instead of the global (--detection-mode) mode.'],
-            choices: %w[mixed passive aggressive], normalize: :to_sym, advanced: true
           )
         ]
       end
@@ -124,11 +119,6 @@ module WPScan
           OptFilePath.new(
             ['--config-backups-list FILE-PATH', 'List of config backups\' filenames to use'],
             exists: true, default: DB_DIR.join('config_backups.txt').to_s, advanced: true
-          ),
-          OptChoice.new(
-            ['--config-backups-detection MODE',
-             'Use the supplied mode to enumerate Config Backups, instead of the global (--detection-mode) mode.'],
-            choices: %w[mixed passive aggressive], normalize: :to_sym, advanced: true
           )
         ]
       end
@@ -139,11 +129,6 @@ module WPScan
           OptFilePath.new(
             ['--db-exports-list FILE-PATH', 'List of DB exports\' paths to use'],
             exists: true, default: DB_DIR.join('db_exports.txt').to_s, advanced: true
-          ),
-          OptChoice.new(
-            ['--db-exports-detection MODE',
-             'Use the supplied mode to enumerate DB Exports, instead of the global (--detection-mode) mode.'],
-            choices: %w[mixed passive aggressive], normalize: :to_sym, advanced: true
           )
         ]
       end
@@ -160,13 +145,7 @@ module WPScan
 
       # @return [ Array<OptParseValidator::OptBase> ]
       def cli_medias_opts
-        [
-          OptChoice.new(
-            ['--medias-detection MODE',
-             'Use the supplied mode to enumerate Medias, instead of the global (--detection-mode) mode.'],
-            choices: %w[mixed passive aggressive], normalize: :to_sym, advanced: true
-          )
-        ]
+        []
       end
 
       # @return [ Array<OptParseValidator::OptBase> ]

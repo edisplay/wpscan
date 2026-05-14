@@ -233,23 +233,23 @@ module WPScan
       end
 
       def enum_timthumbs
-        opts = default_opts('timthumbs').merge(list: ParsedCli.timthumbs_list)
+        opts = { list: ParsedCli.timthumbs_list, show_progression: user_interaction? }
 
-        output('@info', msg: "Enumerating Timthumbs #{enum_detection_message(opts[:mode])}") if user_interaction?
+        output('@info', msg: 'Enumerating Timthumbs') if user_interaction?
         output('timthumbs', timthumbs: target.timthumbs(opts))
       end
 
       def enum_config_backups
-        opts = default_opts('config_backups').merge(list: ParsedCli.config_backups_list)
+        opts = { list: ParsedCli.config_backups_list, show_progression: user_interaction? }
 
-        output('@info', msg: "Enumerating Config Backups #{enum_detection_message(opts[:mode])}") if user_interaction?
+        output('@info', msg: 'Enumerating Config Backups') if user_interaction?
         output('config_backups', config_backups: target.config_backups(opts))
       end
 
       def enum_db_exports
-        opts = default_opts('db_exports').merge(list: ParsedCli.db_exports_list)
+        opts = { list: ParsedCli.db_exports_list, show_progression: user_interaction? }
 
-        output('@info', msg: "Enumerating DB Exports #{enum_detection_message(opts[:mode])}") if user_interaction?
+        output('@info', msg: 'Enumerating DB Exports') if user_interaction?
         output('db_exports', db_exports: target.db_exports(opts))
       end
 
@@ -261,12 +261,11 @@ module WPScan
       end
 
       def enum_medias
-        opts = default_opts('medias').merge(range: ParsedCli.enumerate[:medias])
+        opts = { range: ParsedCli.enumerate[:medias], show_progression: user_interaction? }
 
         if user_interaction?
           output('@info',
-                 msg: "Enumerating Medias #{enum_detection_message(opts[:mode])} " \
-                      '(Permalink setting must be set to "Plain" for those to be detected)')
+                 msg: 'Enumerating Medias (Permalink setting must be set to "Plain" for those to be detected)')
         end
 
         output('medias', medias: target.medias(opts))
