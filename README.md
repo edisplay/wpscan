@@ -17,7 +17,8 @@
   <a href="https://badge.fury.io/rb/wpscan" target="_blank"><img src="https://badge.fury.io/rb/wpscan.svg"></a>
   <a href="https://hub.docker.com/r/wpscanteam/wpscan/" target="_blank"><img src="https://img.shields.io/docker/pulls/wpscanteam/wpscan.svg"></a>
   <a href="https://github.com/wpscanteam/wpscan/actions?query=workflow%3ABuild" target="_blank"><img src="https://github.com/wpscanteam/wpscan/workflows/Build/badge.svg"></a>
-  <a href="https://codeclimate.com/github/wpscanteam/wpscan" target="_blank"><img src="https://codeclimate.com/github/wpscanteam/wpscan/badges/gpa.svg"></a>
+  <a href="https://qlty.sh/gh/wpscanteam/projects/wpscan" target="_blank"><img src="https://qlty.sh/gh/wpscanteam/projects/wpscan/maintainability.svg" alt="Maintainability"></a>
+  <a href="https://coveralls.io/github/wpscanteam/wpscan?branch=master" target="_blank"><img src="https://coveralls.io/repos/github/wpscanteam/wpscan/badge.svg?branch=master" alt="Coverage Status"></a>
 </p>
 
 # INSTALL
