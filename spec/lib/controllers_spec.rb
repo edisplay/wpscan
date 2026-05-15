@@ -197,15 +197,19 @@ describe WPScan::Controllers do
 
   describe '#register_config_files' do
     it 'register the correct files' do
-      expect(File).to receive(:exist?).exactly(4).times.and_return(true)
+      expect(File).to receive(:exist?).exactly(6).times.and_return(true)
 
-      expected = []
       option_parser = controllers.option_parser
 
-      [Dir.home, Dir.pwd].each do |dir|
-        option_parser.config_files.class.supported_extensions.each do |ext|
-          expected << File.join(dir, '.wpscan', "scan.#{ext}")
-        end
+      xdg = ENV.fetch('XDG_CONFIG_HOME', nil)
+      xdg = Pathname.new(Dir.home).join('.config') if xdg.nil? || xdg.empty?
+      app = WPScan.app_name
+
+      dirs = [[xdg, app], [Dir.home, ".#{app}"], [Dir.pwd, ".#{app}"]]
+      exts = option_parser.config_files.class.supported_extensions
+
+      expected = dirs.product(exts).map do |(dir, sub), ext|
+        Pathname.new(dir).join(sub, "scan.#{ext}").to_s
       end
 
       expect(option_parser.config_files.map(&:path)).to eql expected
