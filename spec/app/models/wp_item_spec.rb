@@ -114,7 +114,54 @@ describe WPScan::Model::WpItem do
 
   # Guess all the below should be in the theme/plugin specs
   describe '#readme_url' do
-    xit
+    let(:opts) { super().merge(url: item_url) }
+    let(:item_url) { "#{url}wp-content/plugins/test_item/" }
+
+    context 'when detection mode is :passive' do
+      let(:opts) { super().merge(mode: :passive) }
+
+      it 'returns nil without making requests' do
+        expect(WPScan::Browser).not_to receive(:forge_request)
+        expect(wp_item.readme_url).to be_nil
+      end
+    end
+
+    context 'when detection mode is not :passive' do
+      before do
+        allow(blog).to receive(:head_or_get_params).and_return({})
+      end
+
+      context 'when a readme file is found' do
+        it 'returns the readme URL' do
+          # First readme attempt (readme.txt) returns 404
+          stub_request(:get, "#{item_url}readme.txt").to_return(status: 404)
+          # Second readme attempt (README.txt) returns 200
+          stub_request(:get, "#{item_url}README.txt").to_return(status: 200)
+
+          expect(wp_item.readme_url).to eq "#{item_url}README.txt"
+        end
+
+        it 'caches the result' do
+          stub_request(:get, "#{item_url}readme.txt").to_return(status: 200)
+
+          # First call makes the request
+          expect(wp_item.readme_url).to eq "#{item_url}readme.txt"
+          # Second call should use cached value
+          expect(wp_item.readme_url).to eq "#{item_url}readme.txt"
+        end
+      end
+
+      context 'when no readme file is found' do
+        it 'returns false' do
+          # Stub all potential readme filenames to return 404
+          WPScan::Model::WpItem::READMES.each do |readme|
+            stub_request(:get, "#{item_url}#{readme}").to_return(status: 404)
+          end
+
+          expect(wp_item.readme_url).to be false
+        end
+      end
+    end
   end
 
   describe '#directory_listing?' do
@@ -126,7 +173,30 @@ describe WPScan::Model::WpItem do
   end
 
   describe '#head_and_get' do
-    xit
+    let(:opts) { super().merge(url: item_url) }
+    let(:item_url) { "#{url}wp-content/plugins/test_item/" }
+    let(:path_from_blog) { 'wp-content/plugins/test_item/' }
+
+    before do
+      # Set @path_from_blog as Plugin/Theme classes do in their initialize
+      wp_item.instance_variable_set(:@path_from_blog, path_from_blog)
+    end
+
+    it 'prepends @path_from_blog to the path and delegates to blog.head_and_get' do
+      expect(blog).to receive(:head_and_get).with('wp-content/plugins/test_item/readme.txt', [200], {})
+      wp_item.head_and_get('readme.txt', [200], {})
+    end
+
+    it 'handles nil path by using only @path_from_blog' do
+      expect(blog).to receive(:head_and_get).with('wp-content/plugins/test_item/', [200], {})
+      wp_item.head_and_get(nil, [200], {})
+    end
+
+    it 'passes custom codes and params to blog.head_and_get' do
+      custom_params = { head: { timeout: 5 }, get: { timeout: 10 } }
+      expect(blog).to receive(:head_and_get).with('wp-content/plugins/test_item/style.css', [200, 404], custom_params)
+      wp_item.head_and_get('style.css', [200, 404], custom_params)
+    end
   end
 
   describe '#active_installs' do
