@@ -122,7 +122,13 @@ module WPScan
                           writable: true,
                           readable: true,
                           create: true,
-                          default: File.join(tmp_directory, 'cookie_jar.txt'))
+                          default: File.join(tmp_directory, 'cookie_jar.txt')),
+          OptBoolean.new(['--expect-saml',
+                          'Expect SAML authentication to be required. ' \
+                          'When the target redirects to a SAML IdP, an interactive browser ' \
+                          'is launched for login and the resulting session cookies are reused ' \
+                          'for the rest of the scan.'],
+                         advanced: true)
         ]
       end
 

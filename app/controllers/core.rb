@@ -33,6 +33,7 @@ module WPScan
 
       def before_scan
         @last_update = local_db.last_update
+        @saml_authenticated = false
 
         maybe_output_banner_help_and_version
 
@@ -75,12 +76,66 @@ module WPScan
         handle_redirection(res)
       end
 
+      # Checks whether the response or its redirect chain contains a SAMLRequest,
+      # indicating that the target requires SAML authentication.
+      #
+      # @param [ Addressable::URI ] effective_uri  Final URL after following redirects
+      # @param [ Typhoeus::Response ] homepage_res Response whose redirect chain to inspect
+      #
+      # @return [ Boolean ]
+      def saml_request?(effective_uri, homepage_res = nil)
+        return false unless effective_uri
+
+        return true if effective_uri.to_s.match?(/[?&]SAMLRequest/i)
+
+        # SAML flows often bounce through intermediate pages before the IdP;
+        # walk the redirect chain to catch a SAMLRequest in any Location header.
+        !!homepage_res&.redirections&.any? do |redirect_response|
+          redirect_response.headers['Location']&.match?(/SAMLRequest/i)
+        end
+      end
+
+      # Drives an interactive SAML login via a headless browser, injects the
+      # resulting session cookies into the shared Browser, and clears the target's
+      # cached homepage so the rest of the scan runs against the authenticated session.
+      #
+      # @param [ Addressable::URI ] effective_uri  URL that triggered the SAML redirect
+      #
+      # @return [ Void ]
+      def handle_saml_authentication(effective_uri)
+        raise Error::SAMLAuthenticationFailed if WPScan::ParsedCli.cookie_string && !WPScan::ParsedCli.expect_saml
+        raise Error::SAMLAuthenticationRequired unless WPScan::ParsedCli.expect_saml
+
+        new_cookies = BrowserAuthenticator.authenticate(effective_uri.to_s)
+
+        browser = WPScan::Browser.instance
+        browser.cookie_string = [browser.cookie_string, new_cookies].compact.reject(&:empty?).join('; ')
+
+        # Discard the pre-auth homepage so subsequent finders refetch with the new cookies.
+        target.reset_homepage_cache!
+
+        @saml_authenticated = true
+      end
+
       # Checks for redirects; an out-of-scope redirect raises Error::HTTPRedirect.
       #
       # @param [ Typhoeus::Response ] res
       def handle_redirection(res)
         effective_url = target.homepage_res.effective_url # get and follow location of target.url
         effective_uri = Addressable::URI.parse(effective_url)
+        is_saml = saml_request?(effective_uri, target.homepage_res)
+
+        if WPScan::ParsedCli.expect_saml && !is_saml && !@saml_authenticated
+          puts 'SAML authentication was expected but not required.'
+          puts # New line to serve as buffer before the scan results start
+        end
+
+        if is_saml
+          raise Error::SAMLAuthenticationFailed if @saml_authenticated
+
+          handle_saml_authentication(effective_uri)
+          return check_target_availability
+        end
 
         handle_scheme_redirect(effective_url, effective_uri)
         handle_follow_redirect(effective_url, effective_uri)

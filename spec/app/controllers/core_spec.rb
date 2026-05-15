@@ -496,4 +496,103 @@ describe WPScan::Controller::Core do
       end
     end
   end
+
+  describe '#saml_request?' do
+    context 'when URI contains SAMLRequest' do
+      it 'returns true' do
+        uri = Addressable::URI.parse('http://example.com/?SAMLRequest=value')
+        expect(core.saml_request?(uri)).to be true
+      end
+    end
+
+    context 'when URI does not contain SAMLRequest' do
+      it 'returns false' do
+        uri = Addressable::URI.parse('http://example.com/')
+        expect(core.saml_request?(uri)).to be false
+      end
+    end
+
+    context 'when URI is nil' do
+      it 'returns false' do
+        expect(core.saml_request?(nil)).to be false
+      end
+    end
+
+    context 'when the redirect chain contains a SAMLRequest Location header' do
+      it 'returns true' do
+        uri = Addressable::URI.parse('http://idp.example.com/login')
+        redirect = Typhoeus::Response.new(
+          response_headers: "HTTP/1.1 302 Found\r\nLocation: http://idp.example.com/sso?SAMLRequest=abc\r\n"
+        )
+        homepage_res = instance_double(Typhoeus::Response, redirections: [redirect])
+
+        expect(core.saml_request?(uri, homepage_res)).to be true
+      end
+    end
+  end
+
+  describe '#handle_saml_authentication' do
+    let(:effective_uri)      { Addressable::URI.parse('http://example.com/?SAMLRequest=value') }
+    let(:mock_cookie_string) { 'session_id=abc123; auth_token=xyz789' }
+    let(:browser)            { WPScan::Browser.instance }
+
+    before do
+      allow(WPScan::BrowserAuthenticator)
+        .to receive(:authenticate)
+        .with(effective_uri.to_s)
+        .and_return(mock_cookie_string)
+      allow(WPScan::ParsedCli).to receive(:expect_saml).and_return(false)
+      allow(WPScan::ParsedCli).to receive(:cookie_string).and_return(nil)
+    end
+
+    context 'when SAMLRequest is present and --expect-saml is not set' do
+      it 'raises SAMLAuthenticationRequired error' do
+        expect { core.handle_saml_authentication(effective_uri) }
+          .to raise_error(WPScan::Error::SAMLAuthenticationRequired)
+      end
+    end
+
+    context 'when cookie_string is set but --expect-saml is not' do
+      it 'raises SAMLAuthenticationFailed error' do
+        allow(WPScan::ParsedCli).to receive(:cookie_string).and_return('existing=cookie')
+        expect { core.handle_saml_authentication(effective_uri) }
+          .to raise_error(WPScan::Error::SAMLAuthenticationFailed)
+      end
+    end
+
+    context 'when --expect-saml is set' do
+      before { allow(WPScan::ParsedCli).to receive(:expect_saml).and_return(true) }
+
+      it 'injects the new cookies into the shared browser and clears cached homepage state' do
+        browser.cookie_string = nil
+        core.target.homepage_res = instance_double(Typhoeus::Response)
+        core.target.instance_variable_set(:@homepage_url, 'http://example.com/cached')
+
+        core.handle_saml_authentication(effective_uri)
+
+        expect(browser.cookie_string).to eq(mock_cookie_string)
+        expect(core.target.instance_variable_get(:@homepage_res)).to be_nil
+        expect(core.target.instance_variable_get(:@homepage_url)).to be_nil
+      end
+
+      it 'delegates cache reset to Target#reset_homepage_cache!' do
+        expect(core.target).to receive(:reset_homepage_cache!)
+        core.handle_saml_authentication(effective_uri)
+      end
+
+      it 'appends to an existing cookie string rather than replacing it' do
+        browser.cookie_string = 'existing=cookie'
+
+        core.handle_saml_authentication(effective_uri)
+
+        expect(browser.cookie_string).to eq("existing=cookie; #{mock_cookie_string}")
+      end
+
+      it 'marks the controller as SAML-authenticated' do
+        core.handle_saml_authentication(effective_uri)
+
+        expect(core.instance_variable_get(:@saml_authenticated)).to be true
+      end
+    end
+  end
 end
